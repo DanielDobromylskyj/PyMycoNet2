@@ -23,7 +23,15 @@ class SoftMax(DefaultLayer):
             self.queue, (batch_size,), None,
             input_data.buffer.cl,
             outputs.buffer.cl,
-            np.int32(input_data.shape[0])
+            np.int32(input_data.shape[-1])
         )
 
         return outputs
+
+    def _apply_gradients(self, weight_grads: np.ndarray, bias_grads: np.ndarray) -> None:
+        pass
+
+    def _backward(self, input_data: LayerData, output_data: LayerData,
+                        previous_error: Gradients, batch_size=1, learning_rate=1) -> list[Gradients]:
+        # Due to CRE or something (I cant remember what exactly) we don't modify this.
+        return [previous_error, None, None]

@@ -102,8 +102,6 @@ class DenseLayer(DefaultLayer):
     def _backward(self, input_data: LayerData, output_data: LayerData,
                         previous_error: Gradients, batch_size=1, learning_rate=1) -> list[Gradients]:
 
-        raise NotImplementedError  # todo - implement activations2 support
-
         next_layer_error = Gradients(self.ctx, self.queue, (batch_size, self.input_size))
         next_layer_errors_unreduced = EmptyNetworkBuffer(
             self.ctx, self.queue,
@@ -114,14 +112,10 @@ class DenseLayer(DefaultLayer):
         weight_gradiants = Gradients(self.ctx, self.queue, (batch_size, *self.weights_shape))
         bias_gradiants = Gradients(self.ctx, self.queue, (batch_size, *self.bias_shape))
 
-        outputs_unactivated = output_data.extra_data[0]
-
         event = self.backward_kernel.backward(
             self.queue, (batch_size, *self.weights_shape), None,
             # Args
             input_data.buffer.cl,
-            output_data.buffer.cl,
-            outputs_unactivated.cl,
             self.weights.cl,
 
             previous_error.gradiants.cl,
@@ -131,7 +125,6 @@ class DenseLayer(DefaultLayer):
 
             np.int32(self.input_size),
             np.int32(self.output_size),
-            np.int32(self.activation),
             np.float32(learning_rate)
         )
 

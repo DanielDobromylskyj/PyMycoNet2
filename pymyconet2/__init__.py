@@ -110,7 +110,11 @@ class Network:
             (
                 self.average_batched(layer[0].gradiants.np),
                 self.average_batched(layer[1].gradiants.np),
-            ) for layer in layer_gradients
+            ) if layer[0] is not None else (
+                None, None
+            )
+            for layer in layer_gradients
+
         ]
 
     def train_batched_epoche(self,
