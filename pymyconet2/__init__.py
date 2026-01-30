@@ -59,9 +59,9 @@ class Network:
             if not isinstance(layer, DefaultLayer):
                 raise NetworkValidationException(f"Layer {i+1} is not recognized as a layer.")
 
-            if hasattr(layer, "activation"):
-                if layer.activation == SOFTMAX and (len(self.layout) - 1 != i):
-                    raise NetworkValidationException(f"Layer {i+1} is using Softmax but is not an output layer.")
+            #if hasattr(layer, "activation"):
+            #    if layer.activation == SOFTMAX and (len(self.layout) - 1 != i):
+            #        raise NetworkValidationException(f"Layer {i+1} is using Softmax but is not an output layer.")
 
     def _forward_no_capture(self, next_layer_inputs: LayerData, batch_size: int) -> LayerData:
         for i, layer in enumerate(self.layout):

@@ -1,4 +1,5 @@
 
+
 __kernel void forward(
     __global float* inputs,
     __global float* outputs,
@@ -8,6 +9,5 @@ __kernel void forward(
     int i = get_global_id(1);
     int offset = batch_index * batch_size;
 
-    float v = inputs[offset + i];
-    outputs[offset + i] = (v <= 0) ? 0 : v;
+    outputs[offset + i] = 1.0f / (1.0f + exp(-inputs[offset + i]));
 }

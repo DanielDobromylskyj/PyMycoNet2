@@ -25,6 +25,7 @@ class DefaultLayer:
 
         self.weights = None
         self.biases = None
+        self.is_activation = False
         self.is_loading = is_loading
 
     def get_kernel(self, path: str):
@@ -43,7 +44,7 @@ class DefaultLayer:
 
         self._init()
 
-        if not self.is_loading and (self.weights is None or self.biases is None):
+        if not self.is_loading and (self.weights is None or self.biases is None) and not self.is_activation:
             raise LayerInitializationException("Layer not initialised")
 
         self.initialised = True
