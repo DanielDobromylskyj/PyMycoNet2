@@ -1,0 +1,5 @@
+
+RELU = 0
+SIGMOID = 1
+TANH = 2
+SOFTMAX = 3
