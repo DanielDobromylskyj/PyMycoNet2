@@ -169,7 +169,7 @@ class Network:
             train_targets = [train_targets]
 
         for epoch in range(epoches):
-            #print(f"\r[Network] Training epoche {epoch+1}/{epoches}", end="")
+            print(f"\r[Network] Training epoche {epoch+1}/{epoches}", end="")
 
             all_batch_gradients = [
                 self.average_and_convert_gradients_to_numpy(
@@ -184,5 +184,5 @@ class Network:
             for gradient_batch in all_batch_gradients:
                 self.apply_gradients(gradient_batch)
 
-        #print()
+        print()
 

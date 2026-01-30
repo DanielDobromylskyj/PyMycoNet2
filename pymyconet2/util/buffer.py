@@ -16,13 +16,13 @@ def multiply_array(shape):
 
 class EmptyNetworkBuffer:
     def __init__(self, ctx, queue, shape, item_dtype):
-        self.__cl_ctx, self.__cl_queue = ctx, queue
+        self.cl_ctx, self.cl_queue = ctx, queue
         self.__shape = shape
         self.__dtype = item_dtype
         self.__item_count = multiply_array(shape)
         self.__size = self.__item_count * numpy.dtype(item_dtype).itemsize
 
-        self.__cl_buffer = cl.Buffer(self.__cl_ctx, mf.READ_WRITE, size=self.__size, hostbuf=None)
+        self.__cl_buffer = cl.Buffer(self.cl_ctx, mf.READ_WRITE, size=self.__size, hostbuf=None)
         self.__np_buffer = numpy.empty(self.__shape, dtype=self.__dtype)
 
         self.__last_sync = None
@@ -60,11 +60,11 @@ class EmptyNetworkBuffer:
 
 
     def __sync_np_to_cl(self):  # todo - see about making a function that returns the enqueue event (for async stuff)
-        cl.enqueue_copy(self.__cl_queue, self.__cl_buffer, self.__np_buffer).wait()
+        cl.enqueue_copy(self.cl_queue, self.__cl_buffer, self.__np_buffer).wait()
         self.__last_sync = "cl"
 
     def __sync_cl_to_np(self):  # todo - see about making a function that returns the enqueue event (for async stuff)
-        cl.enqueue_copy(self.__cl_queue, self.__np_buffer, self.__cl_buffer).wait()
+        cl.enqueue_copy(self.cl_queue, self.__np_buffer, self.__cl_buffer).wait()
         self.__last_sync = "np"
 
 
@@ -74,7 +74,7 @@ class EmptyNetworkBuffer:
             self.__np_buffer[offset:end] = array.astype(self.__dtype, copy=False)
 
         if self.__last_sync == "cl":
-            cl.enqueue_copy(self.__cl_queue, self.cl, array, device_offset=offset * numpy.dtype(self.__dtype).itemsize)
+            cl.enqueue_copy(self.cl_queue, self.cl, array, device_offset=offset * numpy.dtype(self.__dtype).itemsize)
 
 
 class NetworkBuffer(EmptyNetworkBuffer):

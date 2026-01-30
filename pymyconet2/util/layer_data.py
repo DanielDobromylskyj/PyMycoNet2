@@ -15,6 +15,13 @@ class LayerData:
     def add_extra_data(self, layer_data) -> None:
         self.extra_data.append(layer_data.buffer)
 
+    def duplicate_empty(self):
+        return LayerData(self.buffer.cl_ctx, self.buffer.cl_queue, self.buffer.shape)
+
+    @property
+    def shape(self):
+        return self.buffer.shape
+
 
 class Gradients:
     def __init__(self, ctx, queue, shape):
