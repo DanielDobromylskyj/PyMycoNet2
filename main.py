@@ -10,7 +10,9 @@ net = pymyconet2.Network((
     Convoluted((2, 2), 1, 4),
     Condense(),
     tanh.TanH(),
-    DenseLayer(64, 2),
+    DenseLayer(64, 32),
+    tanh.TanH(),
+    DenseLayer(32, 2),
     softmax.SoftMax()
 ))
 
