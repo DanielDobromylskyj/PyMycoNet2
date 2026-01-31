@@ -8,9 +8,9 @@ __kernel void forward(
     int i = get_global_id(1);
     int offset = batch_index * batch_size;
 
-    float v = inputs[offset + i];
-    outputs[offset + i] = (v <= 0) ? 0 : v;
+    outputs[offset + i] = tanh(inputs[offset + i]);
 }
+
 
 __kernel void backward(
     __global float* activated,
@@ -22,6 +22,7 @@ __kernel void backward(
     int i = get_global_id(1);
     int offset = batch_index * batch_size;
 
-    float derivative = activated[offset + i] > 0 ? 1.0f : 0.0f;
+    float activated_output = activated[offset + i];
+    float derivative = 1.0f - (activated_output * activated_output);
     error_out[offset + i] = derivative * error_in[offset + i];
 }

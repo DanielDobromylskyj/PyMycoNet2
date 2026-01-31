@@ -25,12 +25,10 @@ __kernel void forward(
 __kernel void reduce(
     __global float* outputs_unreduced,
     __global float* outputs_unactivated,
-    __global float* outputs_reduced,
     __global float* biases,
 
     int input_size,
-    int output_size,
-    int activation_type
+    int output_size
 ) {
     int batch_index = get_global_id(0);
     int output_index = get_global_id(1);
@@ -46,25 +44,7 @@ __kernel void reduce(
     }
 
     outputs_unactivated[reduced_offset + output_index] = total;
-
-    // Activate
-    float activated;
-    switch (activation_type) {
-        case 0: // ReLU
-            activated = fmax(total, 0.0f);
-            break;
-        case 1: // Sigmoid
-            activated = 1.0f / (1.0f + exp(-total));
-            break;
-        case 2: // TanH
-            activated = tanh(total);
-            break;
-        case 3: // SoftMax
-            activated = total; // defer
-            break;
-    }
-
-    outputs_reduced[reduced_offset + output_index] = activated;
+    //outputs_reduced[reduced_offset + output_index] = activated;
 }
 
 

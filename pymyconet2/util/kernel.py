@@ -36,13 +36,14 @@ class KernelBuilder:
         self.context = context
         self.known_programs = {}
 
-    def build_from_path(self, path: str) -> cl.Program:
+    def build_from_path(self, path: str, silent: bool) -> cl.Program:
         path = os.path.normpath(os.path.join(
             str(importlib_resources.files("pymyconet2")), "kernels", path
         ))
 
         if path not in self.known_programs:
-            print(f"[Kernel] Building kernel from source '{path}'")
+            if not silent:
+                print(f"[Kernel] Building kernel from source '{path}'")
             with open(path, "r") as f:
                 prg = cl.Program(self.context, f.read()).build()
 
@@ -51,6 +52,6 @@ class KernelBuilder:
 
         return self.known_programs[path]
 
-    def build_kernel(self, kernel: Kernel) -> None:
-        kernel.program = self.build_from_path(kernel.path)
+    def build_kernel(self, kernel: Kernel, silent) -> None:
+        kernel.program = self.build_from_path(kernel.path, silent)
         kernel.build()

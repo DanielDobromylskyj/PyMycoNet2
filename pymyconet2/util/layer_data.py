@@ -29,3 +29,12 @@ class Gradients:
 
     def write(self, numpy_buffer):
         self.gradiants.write_to_buffer(numpy_buffer, offset=0)
+
+    @staticmethod
+    def from_layer_data(layer_data: LayerData):
+        g = Gradients(layer_data.buffer.cl_ctx, layer_data.buffer.cl_queue, layer_data.buffer.shape)
+        g.gradiants = layer_data.buffer
+        return g
+
+    def duplicate_empty(self):
+        return Gradients(self.gradiants.cl_ctx, self.gradiants.cl_queue, self.gradiants.shape)

@@ -14,7 +14,7 @@ class NetworkInitializationException(Exception):
 
 
 class Network:
-    def __init__(self, layout, validate=True, context=None, queue=None):
+    def __init__(self, layout, validate=True, context=None, queue=None, silent=False):
         if not context or not queue:
             context = cl.create_some_context()
             queue = cl.CommandQueue(context)
@@ -22,6 +22,7 @@ class Network:
         self.context = context
         self.queue = queue
 
+        self.silent = silent
         self.layout = layout
 
         #self.gradient_summing = Kernel("util/network.cl", targets=[])
@@ -36,7 +37,8 @@ class Network:
         self.initialise()
 
     def initialise(self):
-        print("[Network] Initialising...")
+        if not self.silent:
+            print("[Network] Initialising...")
         kernel_builder = KernelBuilder(self.context)
 
         for layer in self.layout:
@@ -44,7 +46,7 @@ class Network:
                 if not isinstance(kernel_to_load, Kernel):
                     raise NetworkInitializationException(f"Couldn't initialise kernel, Invalid data: {kernel_to_load}")
 
-                kernel_builder.build_kernel(kernel_to_load)
+                kernel_builder.build_kernel(kernel_to_load, self.silent)
             layer.init(self.context, self.queue)
 
 
@@ -59,9 +61,9 @@ class Network:
             if not isinstance(layer, DefaultLayer):
                 raise NetworkValidationException(f"Layer {i+1} is not recognized as a layer.")
 
-            if hasattr(layer, "activation"):
-                if layer.activation == SOFTMAX and (len(self.layout) - 1 != i):
-                    raise NetworkValidationException(f"Layer {i+1} is using Softmax but is not an output layer.")
+            #if hasattr(layer, "activation"):
+            #    if layer.activation == SOFTMAX and (len(self.layout) - 1 != i):
+            #        raise NetworkValidationException(f"Layer {i+1} is using Softmax but is not an output layer.")
 
     def _forward_no_capture(self, next_layer_inputs: LayerData, batch_size: int) -> LayerData:
         for i, layer in enumerate(self.layout):
@@ -79,7 +81,7 @@ class Network:
 
     def forward_single(self, inputs: list | np.ndarray) -> np.ndarray:
         if type(inputs) is list:
-            inputs = np.array(inputs, dtype=np.float32)
+            inputs = np.array([inputs], dtype=np.float32)
 
         input_data = LayerData(self.context, self.queue, inputs.shape, inputs)
 
@@ -110,7 +112,11 @@ class Network:
             (
                 self.average_batched(layer[0].gradiants.np),
                 self.average_batched(layer[1].gradiants.np),
-            ) for layer in layer_gradients
+            ) if layer[0] is not None else (
+                None, None
+            )
+            for layer in layer_gradients
+
         ]
 
     def train_batched_epoche(self,

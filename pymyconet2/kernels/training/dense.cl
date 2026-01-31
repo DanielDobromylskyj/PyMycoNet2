@@ -1,8 +1,6 @@
 
 __kernel void backward(
     __global float* inputs,
-    __global float* outputs_activated,
-    __global float* outputs_unactivated,
     __global float* weights,
 
     __global float* previous_errors,
@@ -12,7 +10,6 @@ __kernel void backward(
 
     int input_size,
     int output_size,
-    int activation_id,
     float learning_rate
 ) {
     int batch_index = get_global_id(0);
@@ -28,34 +25,15 @@ __kernel void backward(
     int previous_error_gradients_offset = output_size * batch_index;
     int bias_gradient_offset = output_size * batch_index;
 
-    float activated_output = outputs_activated[output_offset + output_index];
-    float preactivation_output = outputs_unactivated[output_offset + output_index];
     float weight = weights[weight_index];
 
-    float derivative;
-    switch (activation_id) {
-        case 0: // ReLU activation
-            derivative = activated_output > 0 ? 1.0f : 0.0f;
-            break;
-        case 1: // Sigmoid activation
-            derivative = activated_output * (1.0f - activated_output);
-            break;
-        case 2: // Tanh activation
-            derivative = 1.0f - (activated_output * activated_output);
-            break;
-        case 3: // SoftMax (Final layer only)
-            derivative = 1.0f; // defer
-            break;
-    }
-
-    float previous_error = previous_errors[previous_error_gradients_offset + output_index];
-    float delta = previous_error * derivative;
+    float delta = previous_errors[previous_error_gradients_offset + output_index];
     float weight_gradient = delta * inputs[input_offset + input_index] * learning_rate;
 
     weight_gradients[weight_gradient_offset + weight_index] = weight_gradient;
 
     // Yes, we use weight index, its reduced later
-    next_errors[weight_gradient_offset + weight_index] = weights[weight_index] * delta;
+    next_errors[weight_gradient_offset + weight_index] = weight * delta;
 
     if (input_index == 0) { // Only run this once per output node
         bias_gradients[bias_gradient_offset + output_index] = delta * learning_rate;
