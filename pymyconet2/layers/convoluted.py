@@ -7,41 +7,44 @@ from ..activations import *
 from ..util.layer_data import LayerData, Gradients
 
 
-class DenseLayer(DefaultLayer):
-    def __init__(self, input_size: int, output_size: int, activation: int | None = None, is_loading=False):
+class Convoluted(DefaultLayer):
+    def __init__(self, kernel_shape: tuple[int, int], stride: int, filter_count: int, activation: int | None = None, is_loading=False):
         """
             Activation value is just used for weight initialisation.
             No activation function is applied within this layer
         """
         super().__init__(
             kernels=[
-                Kernel("standard/dense.cl", ["forward", "reduce"]),
-                Kernel("training/dense.cl", ["backward", "reducer"])
+                Kernel("standard/convoluted.cl", ["forward"]),
             ],
             is_loading=is_loading
         )
 
-        self.forward_kernel = self.get_kernel("standard/dense.cl")
-        self.backward_kernel = self.get_kernel("training/dense.cl")
+        self.forward_kernel = self.get_kernel("standard/convoluted.cl")
+        #self.backward_kernel = self.get_kernel("training/convoluted.cl")
 
-        self.input_size = input_size
-        self.output_size = output_size
-
-        self.weights_shape = (input_size, output_size)
-        self.bias_shape = (output_size,)
+        self.kernel_shape = kernel_shape
+        self.stride = stride
+        self.filter_count = filter_count
 
         self.activation = activation
 
+        self.weights_shape = (filter_count, *kernel_shape)
+        self.bias_shape = (filter_count,)
+
     def __generate_weights(self) -> np.ndarray:
-        fan_in, fan_out = self.weights_shape
+        count, fan_in, fan_out = self.weights_shape
+        assert count == self.filter_count, "Weight shape is malformed"
 
-        if self.activation == RELU:  # HE Normal
+        if self.activation == RELU:  # HE normal
             std = np.sqrt(2.0 / fan_in)
-            weights = np.random.randn(fan_in, fan_out) * std
+            weights = np.random.randn(count, fan_in, fan_out) * std
 
-        elif self.activation in (SIGMOID, TANH, SOFTMAX, None): # Xavier / Glorot uniform ( Default Init )
+        elif self.activation in (SIGMOID, TANH, SOFTMAX, None):  # Xavier uniform
             limit = np.sqrt(6.0 / (fan_in + fan_out))
-            weights = np.random.uniform(-limit, limit, size=(fan_in, fan_out))
+            weights = np.random.uniform(
+                -limit, limit, size=(count, fan_in, fan_out)
+            )
 
         else:
             raise ValueError(f"Unsupported activation: {self.activation}")
@@ -67,35 +70,41 @@ class DenseLayer(DefaultLayer):
             self.biases = NetworkBuffer(self.ctx, self.queue, bias_data)
 
     def _forward(self, input_data: LayerData, capture_data=False, batch_size=1) -> LayerData:
-        output = LayerData(self.ctx, self.queue, (batch_size, self.output_size))
-        output_unreduced = LayerData(self.ctx, self.queue, (batch_size, *self.weights_shape))
+        if len(input_data.shape) == 3:
+            batch_count, input_width, input_height = input_data.shape
+        else:
+            input_width, input_height = input_data.shape
+
+        output_width = input_width // self.stride
+        output_height = input_height // self.stride
+        total_outputs = output_width * output_height
+
+        output = LayerData(self.ctx, self.queue, (batch_size, self.filter_count, output_width, output_height))
 
         event = self.forward_kernel.forward(
-            self.queue, (batch_size, *self.weights_shape), None,
+            self.queue, (batch_size, self.filter_count, total_outputs), None,
 
-            # Args
             input_data.buffer.cl,
-            output_unreduced.buffer.cl,
-            self.weights.cl,  # Not LayerData, so no .buffer to find, straight to the source
-
-            np.int32(self.input_size),
-            np.int32(self.output_size)
-        )
-
-        event2 = self.forward_kernel.reduce(
-            self.queue, (batch_size, self.output_size), None,
-            # Args
-            output_unreduced.buffer.cl,
             output.buffer.cl,
+            self.weights.cl,
             self.biases.cl,
 
-            np.int32(self.input_size),
-            np.int32(self.output_size),
+            np.int32(input_width),
+            np.int32(input_height),
 
-            wait_for=[event]
+            np.int32(output_width),
+            np.int32(output_height),
+
+            np.int32(self.kernel_shape[0]),
+            np.int32(self.kernel_shape[1]),
+
+            np.int32(self.stride),
+            np.int32(self.filter_count),
         )
 
-        event2.wait()  # todo - make it so we return the event, and add it to the wait_for of the next layer
+        event.wait()
+
+
 
         return output
 
