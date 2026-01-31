@@ -111,45 +111,7 @@ class Convoluted(DefaultLayer):
     def _backward(self, input_data: LayerData, output_data: LayerData,
                         previous_error: Gradients, batch_size=1, learning_rate=1) -> list[Gradients]:
 
-        next_layer_error = Gradients(self.ctx, self.queue, (batch_size, self.input_size))
-        next_layer_errors_unreduced = EmptyNetworkBuffer(
-            self.ctx, self.queue,
-            (batch_size, *self.weights_shape),
-            item_dtype=np.float32
-        )
-
-        weight_gradiants = Gradients(self.ctx, self.queue, (batch_size, *self.weights_shape))
-        bias_gradiants = Gradients(self.ctx, self.queue, (batch_size, *self.bias_shape))
-
-        event = self.backward_kernel.backward(
-            self.queue, (batch_size, *self.weights_shape), None,
-            # Args
-            input_data.buffer.cl,
-            self.weights.cl,
-
-            previous_error.gradiants.cl,
-            next_layer_errors_unreduced.cl,
-            weight_gradiants.gradiants.cl,
-            bias_gradiants.gradiants.cl,
-
-            np.int32(self.input_size),
-            np.int32(self.output_size),
-            np.float32(learning_rate)
-        )
-
-        self.backward_kernel.reducer(
-            self.queue, (batch_size, self.input_size), None,
-            # Args
-            next_layer_errors_unreduced.cl,
-            next_layer_error.gradiants.cl,
-
-            np.int32(self.input_size),
-            np.int32(self.output_size),
-
-            wait_for=[event]
-        )
-
-        return [next_layer_error, weight_gradiants, bias_gradiants]
+        raise NotImplementedError("Method not implemented")
 
     def _apply_gradients(self, weight_grads: np.ndarray, bias_grads: np.ndarray) -> None:
         self.weights.write_to_buffer(self.weights.np - weight_grads)
