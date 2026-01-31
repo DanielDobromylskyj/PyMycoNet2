@@ -21,7 +21,7 @@ class Convoluted(DefaultLayer):
         )
 
         self.forward_kernel = self.get_kernel("standard/convoluted.cl")
-        #self.backward_kernel = self.get_kernel("training/convoluted.cl")
+        self.backward_kernel = self.get_kernel("training/convoluted.cl")
 
         self.kernel_shape = kernel_shape
         self.stride = stride

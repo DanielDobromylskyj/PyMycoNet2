@@ -37,7 +37,9 @@ input_data = [
     ], dtype=np.float32)
 ]
 
-targets = [[1.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
+targets = [np.array([1.0, 0.0], dtype=np.float32),
+           np.array([1.0, 0.0], dtype=np.float32),
+           np.array([0.0, 1.0], dtype=np.float32)]
 
 def log():
     for i in range(len(input_data)):
