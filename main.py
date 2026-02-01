@@ -34,24 +34,31 @@ input_data = [
         [0, 1, 0, 0],
         [0, 0, 0, 1],
         [0, 0, 1, 0],
+    ], dtype=np.float32),
+    np.array([
+        [0, 0, 0, 1],
+        [0, 0, 1, 0],
+        [1, 0, 0, 0],
+        [0, 0, 1, 0],
     ], dtype=np.float32)
 ]
 
 targets = [np.array([1.0, 0.0], dtype=np.float32),
            np.array([1.0, 0.0], dtype=np.float32),
+           np.array([0.0, 1.0], dtype=np.float32),
            np.array([0.0, 1.0], dtype=np.float32)]
 
 def log():
     for i in range(len(input_data)):
         output = net.forward_single(input_data[i])
-        print(f"Test {i}: Target: {[round(x, 3) for x in targets[i]]} Output: {[round(x, 3) for x in output]}")
+        print(f"Test {i}: Target: {np.array([round(x, 3) for x in targets[i]])} Output: {np.array([round(x, 3) for x in output])}")
 
 
 print("\nPre Training")
 log()
 print()
 
-net.train(input_data, targets, epoches=200, max_batch_size=1, learning_rate=0.1)
+net.train(input_data, targets, epoches=1, max_batch_size=1, learning_rate=0.1)
 
 
 print("\nAfter Training")

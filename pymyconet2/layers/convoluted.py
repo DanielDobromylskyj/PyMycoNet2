@@ -16,6 +16,7 @@ class Convoluted(DefaultLayer):
         super().__init__(
             kernels=[
                 Kernel("standard/convoluted.cl", ["forward"]),
+                Kernel("training/convoluted.cl", ["backward", "reduce_weights"])
             ],
             is_loading=is_loading
         )
@@ -111,7 +112,52 @@ class Convoluted(DefaultLayer):
     def _backward(self, input_data: LayerData, output_data: LayerData,
                         previous_error: Gradients, batch_size=1, learning_rate=1) -> list[Gradients]:
 
-        raise NotImplementedError("Method not implemented")
+        input_shape = input_data.shape[-2:]
+        output_shape = output_data.shape[-2:]
+
+        next_errors = Gradients(self.ctx, self.queue, input_data.shape)
+
+        # output_data.shape -> batch_size, filter_count, output_width, output_height
+        weight_gradients_unreduced = Gradients(self.ctx, self.queue, (*output_data.shape, *self.kernel_shape))
+        weight_gradients = Gradients(self.ctx, self.queue, (batch_size, self.filter_count, *self.kernel_shape))
+
+        bias_gradients_unreduced = Gradients(self.ctx, self.queue, (batch_size, self.filter_count, *output_shape))
+        bias_gradients = Gradients(self.ctx, self.queue, (batch_size, self.filter_count))
+
+
+        event = self.backward_kernel.backward(
+            self.queue, (batch_size, self.filter_count, input_shape[0] * input_shape[1]), None,
+            input_data.buffer.cl,
+            output_data.buffer.cl,
+            self.weights.cl,
+
+            previous_error.gradiants.cl,
+            next_errors.gradiants.cl,
+
+            weight_gradients_unreduced.gradiants.cl,
+            bias_gradients_unreduced.gradiants.cl,
+
+            np.int32(input_shape[0]), np.int32(input_shape[1]),
+            np.int32(output_shape[0]), np.int32(output_shape[1]),
+            np.int32(self.kernel_shape[0]), np.int32(self.kernel_shape[1]),
+            np.int32(self.stride), np.int32(self.filter_count),
+            np.float32(learning_rate)
+        )
+
+        event.wait()
+
+        event2 = self.backward_kernel.reduce_weights(
+            self.queue, (batch_size, self.filter_count, self.kernel_shape), None,
+            weight_gradients_unreduced,
+            weight_gradients,
+        )
+
+        # todo - reduce weights
+        # todo - reduce biases
+        # todo - calculate and reduce next_errors
+
+        return [next_errors, weight_gradients, bias_gradients]
+
 
     def _apply_gradients(self, weight_grads: np.ndarray, bias_grads: np.ndarray) -> None:
         self.weights.write_to_buffer(self.weights.np - weight_grads)

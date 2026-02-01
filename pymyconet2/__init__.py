@@ -164,7 +164,8 @@ class Network:
 
     def apply_gradients(self, gradients):
         for i, layer in enumerate(self.layout):
-            layer.apply_gradients(*gradients[i])
+            if gradients[i][0] is not None:
+                layer.apply_gradients(*gradients[i])
 
     def train(self, train_inputs: list[np.ndarray] | np.ndarray, train_targets: list[np.ndarray] | np.ndarray, epoches: int, max_batch_size: int, learning_rate: float):
         if len(train_inputs) > max_batch_size:

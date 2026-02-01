@@ -47,8 +47,8 @@ __kernel void backward(
 
     int kernel_size = kernel_width * kernel_height;
 
-    int weight_g_filter_offset = (kernel_size * (output_width * output_height)) * filter_index;
-    int weight_g_batch_offset = kernel_size * (output_width * output_height) * filter_count;
+    int weight_g_filter_offset = kernel_size * filter_index;
+    int weight_g_batch_offset = kernel_size * filter_count * batch_index;
     int weight_gradient_offset = weight_g_filter_offset + weight_g_batch_offset; // Is this right???
 
     float input_value = inputs[input_offset + input_index];
@@ -59,8 +59,8 @@ __kernel void backward(
         for (int dy=0; dy<(kernel_height / stride); dy++) {
             int output_index = (output_y + dy) * output_width + (output_x + dx);
 
-            int kernel_x = input_x - (output_x * stride);
-            int kernel_y = input_y - (output_y * stride);
+            int kernel_x = input_x - ((output_x + dx) * stride);
+            int kernel_y = input_y - ((output_y + dy) * stride);
 
             int weight_index = kernel_y * kernel_width + kernel_x;
             int weight_grad_index = (kernel_size * output_index) + weight_index;
@@ -70,7 +70,49 @@ __kernel void backward(
 
             float weight_gradient = input_value * previous_error * learning_rate;
             unreduced_weight_gradients[weight_gradient_offset + weight_index] = weight_gradient;
+            printf("%d", weight_gradient_offset + weight_index); // todo weight grad index is wrong
+
+            // If we are the "primary" / first node of the kernel, calc the bias change
+            if (weight_index == 0) {
+                float bias_gradient = previous_error * learning_rate;
+                int bias_index = (output_offset + output_index);
+
+                unreduced_bias_gradients[bias_index] = bias_gradient;
+            }
         }
     }
-    
+}
+
+__kernel void reduce_weights(
+    float unreduced_weights,
+    float reduced_weights,
+
+    int input_width,
+    int input_height,
+
+    int output_width,
+    int output_height,
+
+    int kernel_width,
+    int kernel_height,
+
+    int stride,
+    int filter_count
+) {
+    int batch_index = get_global_id(0);
+    int filter_index = get_global_id(1);
+    int kernel_index = get_global_id(2);
+
+    int kernel_y = kernel_index / kernel_width;
+    int kernel_x = kernel_index % kernel_width;
+
+    int weight_offset = (kernel_width * kernel_height) * filter_index;
+    int weight_index = kernel_y * kernel_width + kernel_x;
+
+    for (int output_x=0; output_x<output_width; output_x++) {
+        for (int output_y=0; output_y<output_height; output_y++) {
+
+        }
+    }
+
 }
